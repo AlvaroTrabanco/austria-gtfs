@@ -44,6 +44,10 @@ FEEDS = {
         "name": "Salzburg Verkehr",
         "filename": "salzburg.zip",
     },
+    "55": {
+        "name": "Kaerntner Linien - Carinthia",
+        "filename": "carinthia.zip",
+    },
     "56": {
         "name": "OOEVV - Upper Austria",
         "filename": "upper-austria.zip",
