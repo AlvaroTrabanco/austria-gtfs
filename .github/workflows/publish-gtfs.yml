@@ -1,0 +1,73 @@
+name: Austria GTFS - Publish Linz
+
+on:
+  workflow_dispatch:
+
+  schedule:
+    - cron: "0 5 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: austria-gtfs-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Download and validate Linz GTFS
+        env:
+          DBP_USERNAME: ${{ secrets.DBP_USERNAME }}
+          DBP_PASSWORD: ${{ secrets.DBP_PASSWORD }}
+        run: python scripts/download_gtfs.py
+
+      - name: Check existing release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view latest >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create release
+        if: steps.release.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create latest \
+            --title "Latest Austrian GTFS feeds" \
+            --notes "Automatically updated GTFS feeds from Mobilitätsverbünde Österreich."
+
+      - name: Publish Linz GTFS
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload latest output/linz.zip --clobber
+
+      - name: Publish metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload latest output/metadata.json --clobber
+
+      - name: Show download URL
+        run: |
+          echo "Linz GTFS:"
+          echo "https://github.com/${{ github.repository }}/releases/download/latest/linz.zip"
