@@ -292,6 +292,11 @@ def download_gtfs(token, dataset_id, year, filename):
         f"{API_URL}/data-sets/"
         f"{dataset_id}/{year}/file"
     )
+    # Obtain a fresh access token for each GTFS download.
+    # Large downloads and GitHub uploads can exceed the
+    # lifetime of the original token.
+
+    token = authenticate()
 
     print(f"Downloading dataset {dataset_id}...")
     print(f"Source: {url}")
