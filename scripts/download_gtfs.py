@@ -256,7 +256,7 @@ def authenticate():
 
 
 def get_datasets(token):
-    print("Retrieving dataset list...")
+    print("Retrieving dataset list...", flush=True)
 
     response = SESSION.get(
         f"{API_URL}/data-sets",
@@ -270,13 +270,34 @@ def get_datasets(token):
         timeout=120,
     )
 
+    print(f"HTTP status: {response.status_code}", flush=True)
+    print(
+        f"Content-Type: {response.headers.get('Content-Type')}",
+        flush=True,
+    )
+    print(
+        f"Response length: {len(response.content)} bytes",
+        flush=True,
+    )
+
     response.raise_for_status()
 
-    datasets = response.json()
+    try:
+        datasets = response.json()
+
+    except ValueError:
+        # Do not print the response body: it may contain
+        # internal server information or sensitive data.
+        raise RuntimeError(
+            "Austrian API returned an invalid JSON response. "
+            f"HTTP {response.status_code}, "
+            f"Content-Type: {response.headers.get('Content-Type')}, "
+            f"Length: {len(response.content)} bytes"
+        )
 
     if not isinstance(datasets, list):
         raise RuntimeError(
-            "Unexpected dataset API response."
+            f"Unexpected API response type: {type(datasets).__name__}"
         )
 
     return {
