@@ -7,7 +7,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
-
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 # ============================================================
 # CONFIGURATION
@@ -74,7 +75,30 @@ REQUIRED_GTFS_FILES = {
     "trips.txt",
     "stop_times.txt",
 }
+# ============================================================
+# HTTP RETRIES
+# ============================================================
 
+def create_session():
+    retry_strategy = Retry(
+        total=6,
+        connect=6,
+        read=3,
+        backoff_factor=5,
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["GET", "POST"],
+        respect_retry_after_header=True,
+    )
+
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+
+    session = requests.Session()
+    session.mount("https://", adapter)
+
+    return session
+
+
+SESSION = create_session()
 
 # ============================================================
 # GITHUB RELEASE HELPERS
@@ -234,7 +258,7 @@ def authenticate():
 def get_datasets(token):
     print("Retrieving dataset list...")
 
-    response = requests.get(
+    response = SESSION.get(
         f"{API_URL}/data-sets",
         headers={
             "Authorization": f"Bearer {token}",
@@ -305,7 +329,7 @@ def download_gtfs(token, dataset_id, year, filename):
     print(f"Downloading dataset {dataset_id}...")
     print(f"Source: {url}")
 
-    with requests.get(
+    with SESSION.get(
         url,
         headers={
             "Authorization": f"Bearer {token}",
